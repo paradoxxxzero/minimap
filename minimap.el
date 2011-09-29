@@ -3,7 +3,7 @@
 ;; Copyright (C) 2011  Florian Mounier
 ;; Copyright (C) 2009, 2010  David Engster
 
-;; Author: David Engster <dengste@eml.cc>
+;; Authors: David Engster <dengste@eml.cc>, Florian Mounier <paradoxxx.zero@;;gmail;;.com>
 ;; Keywords:
 ;; Version: 0.7
 
@@ -632,19 +632,36 @@ This has to be called from the base buffer."
     (setq tags (cdr tags)))))
 
 
-(defun minimap-reset ()
-  "Kill all minimap and recreate one for the buffer"
-  (interactive)
-  (progn
-    (mapcar
+
+(defun defdefadvice ()
+  (defadvice switch-to-buffer (around ewm activate)
+    (progn
+      ad-do-it
+      (minimap-reset))))
+
+(defun undefadvice ()
+  (ad-unadvise 'switch-to-buffer))
+
+(defun kill-minimaps ()
+  (mapcar
      '(lambda (b)
         (if (string-match
              (regexp-quote minimap-buffer-name-prefix)
              (buffer-name b))
             (kill-buffer b)))
-     (buffer-list))
+     (buffer-list)))
+
+(defun minimap-reset ()
+  "Kill all minimaps and recreate one for the buffer"
+  (interactive)
+  (progn
+    (undefadvice)
+    (kill-minimaps)
     (balance-windows)
-    (minimap-create)))
+    (minimap-create)
+    (defdefadvice)))
+(defdefadvice)
+
 
 ;; outline-(minor-)mode
 (add-hook 'outline-view-change-hook 'minimap-sync-overlays)
