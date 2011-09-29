@@ -633,33 +633,53 @@ This has to be called from the base buffer."
 
 
 
+
 (defun defdefadvice ()
-  (defadvice switch-to-buffer (around ewm activate)
-    (progn
-      ad-do-it
-      (minimap-reset))))
+    (defadvice switch-to-buffer (around minimap activate)
+      (progn
+        (minimap-kill-before-switch)
+        ad-do-it
+        (minimap-create-after-switch)))
+      (defadvice other-window (around minimap activate)
+        (progn
+          (minimap-kill-before-switch)
+          ad-do-it
+          (minimap-create-after-switch))))
 
 (defun undefadvice ()
-  (ad-unadvise 'switch-to-buffer))
+  (ad-unadvise 'switch-to-buffer)
+  (ad-unadvise 'other-window))
 
 (defun kill-minimaps ()
   (mapcar
-     '(lambda (b)
+     '(lambda (w)
         (if (string-match
              (regexp-quote minimap-buffer-name-prefix)
-             (buffer-name b))
-            (kill-buffer b)))
-     (buffer-list)))
+             (buffer-name (window-buffer w)))
+            (delete-window w)))
+     (window-list)))
 
-(defun minimap-reset ()
-  "Kill all minimaps and recreate one for the buffer"
-  (interactive)
-  (progn
-    (undefadvice)
-    (kill-minimaps)
-    (balance-windows)
-    (minimap-create)
-    (defdefadvice)))
+(defun recreate-minimaps ()
+  (let (b (current-buffer))
+       (mapcar
+        '(lambda (w)
+             (switch-to-buffer (window-buffer w))
+             (minimap-create))
+        (window-list)))
+  (switch-to-buffer b))
+
+(defun minimap-kill-before-switch ()
+  (undefadvice)
+  (kill-minimaps)
+  (balance-windows)
+  (defdefadvice))
+
+(defun minimap-create-after-switch ()
+  (undefadvice)
+  ;; (recreate-minimaps)
+  (minimap-create)
+  (defdefadvice))
+
 (defdefadvice)
 
 
